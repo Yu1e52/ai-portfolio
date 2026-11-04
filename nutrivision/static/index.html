@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NutriVision · AI 食物识别与营养顾问</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231F7A4D'/%3E%3Cpath d='M16 24C10 24 7 20 7 14c0-2 1-4 3-5l6 5 6-5c2 1 3 3 3 5 0 6-3 10-9 10z' fill='%23ffffff'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #F4F8F2;
+    --card: #FFFFFF;
+    --ink: #1E293B;
+    --ink-soft: #5B6B7B;
+    --ink-faint: #94A3B8;
+    --brand: #1F7A4D;
+    --brand-deep: #145A36;
+    --brand-soft: #E4F2E9;
+    --accent: #0D9488;
+    --line: #E3EAE1;
+    --danger: #C2410C;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(20, 60, 40, .05), 0 10px 30px -18px rgba(20, 60, 40, .25);
+    --font: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: auto; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ===== 顶部品牌栏 ===== */
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px;
+    max-width: 1080px; margin: 0 auto;
+  }
+  .logo {
+    width: 38px; height: 38px; border-radius: 11px;
+    background: var(--brand); flex: none;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo svg { width: 22px; height: 22px; }
+  .brand-name { font-size: 19px; font-weight: 700; letter-spacing: .01em; }
+  .brand-sub { font-size: 12px; color: var(--ink-faint); margin-top: 1px; }
+  .status-pill {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--ink-soft);
+    background: var(--card); border: 1px solid var(--line);
+    padding: 6px 12px; border-radius: 999px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #CBD5E1; }
+  .dot.online { background: #22C55E; box-shadow: 0 0 0 3px rgba(34,197,94,.15); }
+
+  /* ===== 主区双栏 ===== */
+  main {
+    max-width: 1080px; margin: 0 auto; padding: 8px 20px 40px;
+    display: grid; gap: 18px;
+  }
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    min-width: 0;
+  }
+  .panel-title {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 15px; font-weight: 650; margin-bottom: 14px;
+  }
+  .panel-title svg { width: 17px; height: 17px; color: var(--brand); flex: none; }
+
+  /* ===== 上传区 ===== */
+  .dropzone {
+    border: 1.5px dashed #BFD3C4;
+    border-radius: 12px;
+    padding: 26px 16px;
+    text-align: center;
+    color: var(--ink-soft); font-size: 14px;
+    transition: border-color .15s, background .15s;
+  }
+  .dropzone.drag { border-color: var(--brand); background: var(--brand-soft); }
+  .dropzone svg { width: 34px; height: 34px; color: var(--brand); margin-bottom: 8px; }
+  .dropzone strong { color: var(--brand); }
+  .preview-wrap { margin-top: 14px; display: none; }
+  .preview-wrap.show { display: block; }
+  .preview {
+    width: 100%; max-height: 210px; object-fit: cover;
+    border-radius: 10px; border: 1px solid var(--line);
+  }
+  .action-row { display: flex; gap: 10px; margin-top: 14px; }
+  .btn {
+    border: none; border-radius: 10px;
+    padding: 12px 18px; font-size: 14px; font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 44px;
+  }
+  .btn-primary { background: var(--brand); color: #fff; flex: 1; }
+  .btn-primary:hover { background: var(--brand-deep); }
+  .btn-primary:disabled { background: #A7C4B4; cursor: not-allowed; }
+  .btn-ghost {
+    background: transparent; color: var(--ink-soft);
+    border: 1px solid var(--line); flex: none;
+  }
+  .btn-ghost:hover { color: var(--ink); background: #F6F9F5; }
+  .btn svg { width: 16px; height: 16px; }
+  .spinner {
+    width: 16px; height: 16px; flex: none;
+    border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== 识别结果 ===== */
+  .result { margin-top: 16px; display: none; }
+  .result.show { display: block; }
+  .result-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .food-name { font-size: 17px; font-weight: 700; }
+  .food-grams { font-size: 13px; color: var(--ink-faint); }
+  .conf-bar {
+    margin: 10px 0 2px; height: 6px; border-radius: 999px;
+    background: #EDF2EC; overflow: hidden;
+  }
+  .conf-fill { height: 100%; background: var(--brand); border-radius: 999px; transition: width .5s; }
+  .conf-label { font-size: 12px; color: var(--ink-faint); margin-bottom: 14px; }
+  .cal-box {
+    display: flex; align-items: baseline; gap: 8px;
+    background: linear-gradient(135deg, var(--brand), var(--accent));
+    color: #fff; border-radius: 12px; padding: 16px 18px; margin-bottom: 14px;
+  }
+  .cal-num { font-size: 34px; font-weight: 800; line-height: 1; }
+  .cal-unit { font-size: 14px; opacity: .85; }
+  .cal-sub { margin-left: auto; font-size: 12px; text-align: right; line-height: 1.5; opacity: .9; }
+  .nutri-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+  .nutri-item {
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 11px 13px; background: #FBFDFB;
+  }
+  .nutri-label { font-size: 12px; color: var(--ink-faint); display: flex; align-items: center; gap: 5px; }
+  .nutri-label svg { width: 13px; height: 13px; }
+  .nutri-value { font-size: 17px; font-weight: 700; margin-top: 3px; }
+  .nutri-unit { font-size: 11px; color: var(--ink-faint); font-weight: 400; }
+  .advice-block {
+    background: var(--brand-soft); border-radius: 10px;
+    padding: 13px 15px; font-size: 13.5px; line-height: 1.75; color: #1F3D2E;
+  }
+  .advice-block::before { content: "建议"; display: block; font-size: 12px; font-weight: 700; color: var(--brand); margin-bottom: 4px; }
+
+  /* ===== 聊天区 ===== */
+  #chatBox {
+    height: 320px; overflow-y: auto;
+    background: #FAFCFA; border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px; margin-bottom: 12px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .msg {
+    max-width: 86%; padding: 10px 13px;
+    font-size: 13.5px; line-height: 1.7;
+    border-radius: 12px; word-break: break-word; white-space: pre-wrap;
+  }
+  .msg.user {
+    align-self: flex-end; background: var(--brand); color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .msg.ai {
+    align-self: flex-start; background: #fff;
+    border: 1px solid var(--line); color: var(--ink);
+    border-bottom-left-radius: 4px;
+  }
+  .msg.ai b { color: var(--brand-deep); font-weight: 650; }
+  .msg.thinking {
+    align-self: flex-start; color: var(--ink-faint);
+    background: #fff; border: 1px solid var(--line);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .thinking-dots { display: inline-flex; gap: 3px; }
+  .thinking-dots i {
+    width: 5px; height: 5px; border-radius: 50%; background: var(--ink-faint);
+    animation: blink 1.2s infinite;
+  }
+  .thinking-dots i:nth-child(2) { animation-delay: .2s; }
+  .thinking-dots i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%,60%,100% { opacity: .25; } 30% { opacity: 1; } }
+  .chat-input-row { display: flex; gap: 9px; }
+  #chatInput {
+    flex: 1; min-width: 0;
+    padding: 12px 14px; font-size: 16px; font-family: inherit;
+    border: 1px solid var(--line); border-radius: 10px; background: #fff;
+    color: var(--ink); outline: none;
+  }
+  #chatInput:focus { border-color: var(--brand); }
+  #sendBtn { flex: none; background: var(--brand); color: #fff; border: none; border-radius: 10px; padding: 0 18px; min-height: 44px; }
+  #sendBtn:hover { background: var(--brand-deep); }
+  #sendBtn:disabled { background: #A7C4B4; cursor: not-allowed; }
+
+  /* ===== 空态 ===== */
+  .empty {
+    text-align: center; color: var(--ink-faint);
+    font-size: 13px; padding: 18px 8px; line-height: 1.8;
+  }
+  .empty svg { width: 30px; height: 30px; margin-bottom: 8px; color: #BBD3C4; }
+
+  footer {
+    max-width: 1080px; margin: 0 auto; padding: 0 20px 34px;
+    font-size: 12px; color: var(--ink-faint); text-align: center;
+  }
+
+  /* ===== 桌面断点：双栏 ===== */
+  @media (min-width: 900px) {
+    main { grid-template-columns: 1fr 1fr; align-items: start; }
+    .panel:nth-child(1) { position: sticky; top: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo" aria-hidden="true">
+    <svg viewBox="0 0 32 32" fill="none"><path d="M16 25C9 25 6 20.5 6 14c0-2.2 1-4.3 3-5.4l7 5.4 7-5.4c2 1.1 3 3.2 3 5.4 0 6.5-3 11-10 11z" fill="#fff"/><circle cx="16" cy="14" r="2.4" fill="#fff" opacity=".9"/></svg>
+  </div>
+  <div>
+    <div class="brand-name">NutriVision</div>
+    <div class="brand-sub">拍照识别食物 · 热量计算 · AI 营养顾问</div>
+  </div>
+  <div class="status-pill"><span class="dot" id="statusDot"></span><span id="statusText">检查服务中</span></div>
+</header>
+
+<main>
+  <!-- ===== 面板一：拍照识别 ===== -->
+  <section class="panel" aria-label="拍照识别">
+    <div class="panel-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 0 1 2-2h3l2-3h4l2 3h3a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><circle cx="12" cy="13" r="4"/></svg>
+      拍照识别
+    </div>
+
+    <div class="dropzone" id="dropzone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V6m0 0L7.5 10.5M12 6l4.5 4.5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      <div>点击选择图片，或把食物照片拖到这里</div>
+      <div style="margin-top:6px;font-size:12.5px">支持 JPG / PNG</div>
+      <input type="file" id="foodImg" accept="image/png,image/jpeg" style="display:none">
+    </div>
+
+    <div class="preview-wrap" id="previewWrap">
+      <img class="preview" id="preview" alt="待识别图片预览">
+      <div class="action-row">
+        <button class="btn btn-primary" id="analyzeBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <span id="analyzeBtnText">开始识别</span>
+        </button>
+        <button class="btn btn-ghost" id="resetBtn">重选</button>
+      </div>
+    </div>
+
+    <div class="result" id="result"></div>
+    <div class="empty" id="resultEmpty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 18a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1z"/><path d="M7 13a5 5 0 0 1 10 0"/><path d="M9 9a3 3 0 0 1 6 0"/></svg>
+      上传一张食物照片，自动识别、计算热量并给出建议
+    </div>
+  </section>
+
+  <!-- ===== 面板二：营养顾问 ===== -->
+  <section class="panel" aria-label="营养顾问对话">
+    <div class="panel-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z"/><path d="M8.5 10.5h7M8.5 13.5h4"/></svg>
+      营养顾问
+      <span style="margin-left:auto;font-size:12px;color:var(--ink-faint);font-weight:400" id="threadLabel">自动记忆上下文</span>
+    </div>
+
+    <div id="chatBox"></div>
+    <div class="chat-input-row">
+      <input type="text" id="chatInput" placeholder="问问营养师：他汀药能吃西柚吗？" maxlength="500">
+      <button id="sendBtn" aria-label="发送">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </section>
+</main>
+
+<footer>NutriVision · LangGraph + FastAPI + DeepSeek 驱动</footer>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const threadId = "web-" + Date.now().toString(36);
+  let analyzing = false, waiting = false;
+
+  /* ---------- 工具：安全转义 AI 文本 ---------- */
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  /* 极简 markdown：**粗体** 与换行，其余保持纯文本（防 XSS） */
+  function fmt(text) {
+    return esc(text).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\n/g, "<br>");
+  }
+
+  /* ---------- 服务状态探测（本地 file:// 预览时跳过） ---------- */
+  if (location.protocol.startsWith("http")) {
+    fetch("api/hello").then(r => r.json()).then(() => {
+      $("statusDot").classList.add("online");
+      $("statusText").textContent = "服务在线";
+    }).catch(() => { $("statusText").textContent = "服务暂不可达"; });
+  } else {
+    $("statusText").textContent = "本地预览";
+  }
+
+  /* ---------- 上传 / 预览 ---------- */
+  const dz = $("dropzone"), fileInput = $("foodImg");
+  dz.addEventListener("click", () => fileInput.click());
+  dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("drag"); });
+  dz.addEventListener("dragleave", () => dz.classList.remove("drag"));
+  dz.addEventListener("drop", e => {
+    e.preventDefault(); dz.classList.remove("drag");
+    if (e.dataTransfer.files[0]) pick(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener("change", () => fileInput.files[0] && pick(fileInput.files[0]));
+  $("resetBtn").addEventListener("click", resetPick);
+
+  function pick(file) {
+    if (!/image\/(png|jpe?g)/.test(file.type)) { toast("只支持 JPG / PNG 图片"); return; }
+    const url = URL.createObjectURL(file);
+    $("preview").src = url;
+    $("previewWrap").classList.add("show");
+    dz.style.display = "none";
+    $("result").classList.remove("show");
+    $("resultEmpty").style.display = "block";
+  }
+  function resetPick() {
+    $("previewWrap").classList.remove("show");
+    dz.style.display = "block";
+    fileInput.value = "";
+  }
+
+  /* ---------- 识别 ---------- */
+  $("analyzeBtn").addEventListener("click", analyze);
+  function analyze() {
+    if (analyzing || !fileInput.files[0]) return;
+    analyzing = true;
+    $("analyzeBtn").disabled = true;
+    $("analyzeBtnText").textContent = "识别中";
+    $("analyzeBtn").querySelector("svg").style.display = "none";
+    $("analyzeBtn").insertAdjacentHTML("afterbegin", '<span class="spinner" aria-hidden="true"></span>');
+    $("resultEmpty").style.display = "none";
+
+    const form = new FormData();
+    form.append("file", fileInput.files[0]);
+    fetch("api/analyze", { method: "POST", body: form })
+      .then(r => r.json())
+      .then(data => {
+        if (data.code !== 0) throw new Error(JSON.stringify(data.detail || data));
+        renderResult(data.report);
+      })
+      .catch(err => showError("识别失败", err))
+      .finally(() => {
+        analyzing = false;
+        $("analyzeBtn").disabled = false;
+        $("analyzeBtnText").textContent = "开始识别";
+        $("analyzeBtn").querySelector(".spinner")?.remove();
+        const icon = $("analyzeBtn").querySelector("svg"); if (icon) icon.style.display = "";
+      });
+  }
+
+  function renderResult(r) {
+    const cal = Number(r.calories || 0);
+    const conf = Math.round((r.confidence || 0) * 100);
+    const p = r.nutrition || {};
+    $("result").innerHTML =
+      '<div class="result-head"><span class="food-name">' + esc(r.food_name) +
+      '</span><span class="food-grams">约 ' + esc(r.estimated_g) + ' 克</span></div>' +
+      '<div class="conf-bar"><div class="conf-fill" style="width:' + conf + '%"></div></div>' +
+      '<div class="conf-label">识别置信度 ' + conf + '%</div>' +
+      '<div class="cal-box"><div class="cal-num">' + cal.toFixed(1) +
+      '</div><div class="cal-unit">kcal</div>' +
+      '<div class="cal-sub">估算热量<br>按 ' + esc(r.estimated_g) + ' 克计算</div></div>' +
+      '<div class="nutri-grid">' +
+        '<div class="nutri-item"><div class="nutri-label">' + nutIcon("protein") + '蛋白质</div>' +
+          '<div class="nutri-value">' + (p.protein ?? "—") + ' <span class="nutri-unit">g</span></div></div>' +
+        '<div class="nutri-item"><div class="nutri-label">' + nutIcon("fat") + '脂肪</div>' +
+          '<div class="nutri-value">' + (p.fat ?? "—") + ' <span class="nutri-unit">g</span></div></div>' +
+      '</div>' +
+      '<div class="advice-block">' + fmt(r.advice || "暂无建议") + '</div>';
+    $("result").classList.add("show");
+  }
+  function nutIcon(kind) {
+    const c = 'fill="none" stroke="currentColor" stroke-width="2"';
+    return kind === "protein"
+      ? '<svg viewBox="0 0 24 24" ' + c + ' style="width:13px;height:13px;color:var(--brand)"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>'
+      : '<svg viewBox="0 0 24 24" ' + c + ' style="width:13px;height:13px;color:var(--brand)"><path d="M12 3c3 4 6 7 6 10a6 6 0 1 1-12 0c0-3 3-6 6-10z"/></svg>';
+  }
+  function showError(title, err) {
+    $("result").innerHTML = '<div class="advice-block" style="background:#FDF0E7;color:#7C3A0F">' + title + "：" + esc(err.message || err) + "，请重试或换一张图片</div>";
+    $("result").classList.add("show");
+  }
+
+  /* ---------- 对话 ---------- */
+  const box = $("chatBox"), input = $("chatInput"), sendBtn = $("sendBtn");
+  box.innerHTML = '<div class="msg ai">你好，我是 NutriVision 营养顾问。可以问我：<br>· 我今天吃了啥？<br>· 吃他汀药的人能吃西柚吗？<br>· 帮我算算炒青菜的热量</div>';
+
+  sendBtn.addEventListener("click", send);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") send(); });
+
+  function send() {
+    const msg = input.value.trim();
+    if (!msg || waiting) return;
+    input.value = "";
+    box.innerHTML += '<div class="msg user">' + esc(msg) + '</div>';
+    box.innerHTML += '<div class="msg thinking"><span class="thinking-dots"><i></i><i></i><i></i></span>正在思考…</div>';
+    box.scrollTop = box.scrollHeight;
+    waiting = true; sendBtn.disabled = true;
+
+    fetch("api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: msg, thread_id: threadId })
+    })
+      .then(r => r.json())
+      .then(data => {
+        box.querySelector(".msg.thinking")?.remove();
+        if (data.code !== 0) throw new Error(JSON.stringify(data.detail || data));
+        box.innerHTML += '<div class="msg ai">' + fmt(data.answer) + '</div>';
+      })
+      .catch(err => {
+        box.querySelector(".msg.thinking")?.remove();
+        box.innerHTML += '<div class="msg ai" style="color:#C2410C">请求失败：' + esc(err.message || err) + "</div>";
+      })
+      .finally(() => { waiting = false; sendBtn.disabled = false; box.scrollTop = box.scrollHeight; });
+  }
+
+  /* ---------- 轻量 toast ---------- */
+  function toast(text) {
+    let t = document.createElement("div");
+    t.textContent = text;
+    t.style.cssText = "position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1E293B;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;z-index:99;box-shadow:0 8px 24px rgba(0,0,0,.25)";
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2200);
+  }
+</script>
+</body>
+</html>

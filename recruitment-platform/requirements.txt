@@ -1,0 +1,2 @@
+# Optional: needed only for text-based PDF extraction; TXT/DOCX use standard library.
+pypdf
