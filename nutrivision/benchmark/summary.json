@@ -1,0 +1,31 @@
+{
+  "total": 30,
+  "valid": 30,
+  "correct": 29,
+  "accuracy": 0.9667,
+  "avg_latency_sec": 2.47,
+  "median_latency_sec": 2.26,
+  "p95_latency_sec": 3.53,
+  "per_category": {
+    "pizza": {
+      "total": 6,
+      "correct": 5
+    },
+    "burger": {
+      "total": 6,
+      "correct": 6
+    },
+    "pasta": {
+      "total": 6,
+      "correct": 6
+    },
+    "dessert": {
+      "total": 6,
+      "correct": 6
+    },
+    "rice": {
+      "total": 6,
+      "correct": 6
+    }
+  }
+}

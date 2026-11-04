@@ -79,6 +79,15 @@ python test_api.py
 
 覆盖 `/api/hello`、`/api/chat`（两轮记忆）、`/api/history` 和空消息 400 兜底。
 
+## 评测
+
+在 30 张公开食物图（5 类：pizza / burger / pasta / dessert / rice）上调用部署后的 `/api/analyze`：
+
+- 识别正确 29 / 30（96.7%）
+- 平均响应 2.47 s，P95 3.53 s
+- 只评测菜品识别，不包含营养匹配或建议质量
+- 口径、逐条结果与局限见 [benchmark/README.md](benchmark/README.md)
+
 ## 目录
 
 ```text
@@ -90,6 +99,7 @@ nutrivision/
 ├── nutrition_kb.txt    # 营养知识库
 ├── static/index.html   # 前端页面
 ├── test_api.py         # 接口验收脚本
+├── benchmark/          # 30 张图评测口径与明细
 └── requirements.txt
 ```
 
