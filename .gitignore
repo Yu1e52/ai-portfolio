@@ -23,6 +23,7 @@ uploads/
 records/
 *.log
 .test-accounts-*/
+nutrivision/benchmark/images/
 
 # Editors / OS
 .idea/
